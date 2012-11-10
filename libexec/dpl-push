@@ -26,13 +26,10 @@ then
       ;;
     m)
       mysql=1
-      echo "Unsupported switch: -m" >&2
-      exit 1
       ;;
     d)
       nofiles=1
-      echo "Unsupported switch: -d" >&2
-      exit 1
+      mysql=1
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -50,29 +47,41 @@ then
     echo "You have to to define enviroment to push to with -e \$env"
     exit 1
   else
+    # prepare deployment url
     eval DEPLOYMENT=\$"${env}_deployment"
+
+    # prepare mysql
+    eval MYSQL=\$"${env}_mysql"
+    if [[ $mysql == 1 && ! $MYSQL ]]
+    then
+      mysql=0
+    fi
+
+    # and away we go
     ssh webs <<EOI
     cd ./deployments/$DEPLOYMENT
-    git pull
-    if [[ \$local ]]
+    
+    # if no nofiles flag, pull
+    if [[ $nofiles != 1 ]]
     then
-      echo 'eyoo'
+      echo "Pulling files…"
+      git pull
+      echo ""
     fi
+    
+    # if db flag, import db
+    if [[ $mysql == 1 ]]
+    then
+      echo "Importing database…"
+      mysql $MYSQL < _dump.sql
+      echo ""
+    fi
+
     echo 'All okay :)'
     echo ''
     exit
 EOI
   fi
-
-  # login to ssh and deploy
-#   ssh webs <<EOI
-#   cd ./deployments/$DEPLOYMENT
-#   pwd
-#   # git pull
-#   # echo 'All okay :)'
-#   # echo ''
-#   # exit
-# EOI
 else
   echo "No .dpl file found, exiting"
   echo ":("
