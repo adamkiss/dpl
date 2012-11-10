@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Usage: dpl push [<args>]
+# Summary: Push current version of project to $enviroment
+# Help: This command pushes current version of repo to $enviroment
+#   -e - [req] enviroment to push to (usually live | staging)
+#   -m – includde mysql dump
+#   -d - database only (no files, no need to include -m here)
+# :)
+
+set -e
+
+if [ -f '.dpl' ]
+then
+  source '.dpl'
+
+  # push actual version to repo
+  # git push
+
+  mysql=0
+  nofiles=0
+
+  while getopts ":e:md" opt; do
+  case $opt in
+    e)
+      env=$OPTARG
+      ;;
+    m)
+      mysql=1
+      echo "Unsupported switch: -m" >&2
+      exit 1
+      ;;
+    d)
+      nofiles=1
+      echo "Unsupported switch: -d" >&2
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+  done
+
+  if [[ ! $env ]]
+  then
+    echo "You have to to define enviroment to push to with -e \$env"
+    exit 1
+  else
+    eval DEPLOYMENT=\$"${env}_deployment"
+    ssh webs <<EOI
+    cd ./deployments/$DEPLOYMENT
+    git pull
+    if [[ \$local ]]
+    then
+      echo 'eyoo'
+    fi
+    echo 'All okay :)'
+    echo ''
+    exit
+EOI
+  fi
+
+  # login to ssh and deploy
+#   ssh webs <<EOI
+#   cd ./deployments/$DEPLOYMENT
+#   pwd
+#   # git pull
+#   # echo 'All okay :)'
+#   # echo ''
+#   # exit
+# EOI
+else
+  echo "No .dpl file found, exiting"
+  echo ":("
+  echo ""
+  exit 1
+fi
