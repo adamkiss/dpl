@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Usage: dpl db <direction> <enviroment>
+# Summary: Database manipulation
+# Help: Helps with manipulation of databases. 
+#   direction:  import / dump 
+#   enviroment: localhost / staging / live
+# :)
+
+set -e
+
+if [ -f '.dpl' ]
+then
+  source '.dpl'
+
+  if [[ $1 != 'import' && $1 != 'dump' && $1 != 'export' ]]
+  then
+    echo 'Incorrect parameters: $1 has to be [import|dump]'
+    echo 'Usage: dpl db <direction> <enviroment>'
+    echo ''
+    exit 1
+  fi
+
+  if [[ ! $2 ]]
+  then
+    echo 'Incorrect parameters: $2 has to be enviroment as defined in .dpl'
+    echo 'Usage: dpl db <direction> <enviroment>'
+    echo ''
+    exit 1
+  fi
+
+  eval MYSQL=\$"$2_mysql"
+  if [[ ! $MYSQL ]]
+  then
+    echo "Error: $2_mysql does not exist"
+    echo 'Usage: dpl db <direction> <enviroment>'
+    echo ''
+    exit 1
+  fi
+
+  # do we use different host?
+  HOST=''
+  eval host=\$"$2_mysql_host"
+  if [[ $host ]]
+  then
+    HOST=$host
+  fi
+
+# -
+
+  if [[ $1 == 'import' ]]
+  then
+
+    echo "importing database…"
+    echo `mysql --verbose $MYSQL $HOST < _dump.sql`
+    # echo "mysql $MYSQL $HOST < _dump.sql"
+    echo 'done :)'
+    echo ''
+
+  else
+
+    echo "exporting database…"
+    DATE=`date '+%H:%m, %A, %d. %B %Y'`
+
+    if [[ $2 == 'localhost' ]]
+    then
+      echo `mysqldump --verbose --skip-extended-insert $MYSQL $HOST > _dump.sql`
+      git add _dump.sql
+      git commit -m "Dump of local database, $DATE"
+    else
+      eval DEPLOYMENT=\$"${env}_deployment"
+      ssh webs <<EOI
+        cd ./deployments/$DEPLOYMENT
+        mysqldump --verbose --skip-extended-insert $MYSQL $HOST > _dump.sql
+        git add _dump.sql
+        git commit -m "$2: Database dump, $DATE"
+        git push
+EOI
+    fi
+    # echo "mysqldump --skip-extended-insert $MYSQL $HOST > _dump.sql"
+    echo 'done :)'
+    echo ''
+    # 
+  fi
+fi
