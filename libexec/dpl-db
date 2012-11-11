@@ -67,7 +67,7 @@ then
       git add _dump.sql
       git commit -m "Dump of local database, $DATE"
     else
-      eval DEPLOYMENT=\$"${env}_deployment"
+      eval DEPLOYMENT=\$"${2}_deployment"
       ssh webs <<EOI
         cd ./deployments/$DEPLOYMENT
         mysqldump --verbose --skip-extended-insert $MYSQL $HOST > _dump.sql

@@ -13,9 +13,6 @@ if [ -f '.dpl' ]
 then
   source '.dpl'
 
-  # push actual version to repo
-  # git push
-
   mysql=0
   nofiles=0
 
@@ -50,12 +47,8 @@ then
     # prepare deployment url
     eval DEPLOYMENT=\$"${env}_deployment"
 
-    # prepare mysql
-    eval MYSQL=\$"${env}_mysql"
-    if [[ $mysql == 1 && ! $MYSQL ]]
-    then
-      mysql=0
-    fi
+    # push actual version to repo
+    git push
 
     # and away we go
     ssh webs <<EOI
@@ -68,19 +61,16 @@ then
       git pull
       echo ""
     fi
-    
-    # if db flag, import db
-    if [[ $mysql == 1 ]]
-    then
-      echo "Importing database…"
-      mysql $MYSQL < _dump.sql
-      echo ""
-    fi
 
     echo 'All okay :)'
     echo ''
     exit
 EOI
+    if [[ $mysql == 1 ]]
+    then
+      dpl db import $env
+    fi
+
   fi
 else
   echo "No .dpl file found, exiting"
