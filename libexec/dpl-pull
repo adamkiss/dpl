@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Usage: dpl pull [<args>]
+# Summary: Pull current version of project from $enviroment
+# Help: This command pushes current version of repo to $enviroment
+#   -e - [req] enviroment to push to (usually live | staging)
+#   -m – includde mysql dump
+# :)
+
+set -e
+
+if [ -f '.dpl' ]
+then
+  source '.dpl'
+
+  mysql=0
+
+  while getopts ":e:md" opt; do
+  case $opt in
+    e)
+      env=$OPTARG
+      ;;
+    m)
+      mysql=1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+  done
+
+  if [[ ! $env ]]
+  then
+    echo "You have to to define enviroment to pull from with -e <\$env>"
+    exit 1
+  else
+    # prepare deployment url
+    eval DEPLOYMENT=\$"${env}_deployment"
+
+    # current date
+    DATE=`date '+%H:%m, %A, %d. %B %Y'`
+
+    # and away we go
+    ssh webs <<EOI
+    cd ./deployments/$DEPLOYMENT
+
+    echo "Preparing commit…"
+    git add -A .    
+    git commit -m "$env: All changes commit as of $DATE"
+    git push
+
+    exit
+EOI
+    # export db is mysql flag
+    if [[ $mysql == 1 ]]
+    then
+      dpl db export $env
+    fi
+
+    # aaaanf pull
+    git pull
+    echo 'done :)'
+    echo ''
+    exit
+  fi
+else
+  echo "No .dpl file found, exiting"
+  echo ":("
+  echo ""
+  exit 1
+fi

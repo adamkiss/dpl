@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Usage: dpl status [<args>]
+# Summary: Prints out current status of git repository at $enviroment
+# Help: This command connects to ssh enviroment and prints out git status
+#   -e - [req] enviroment to push to (usually live | staging)
+# :)
+
+set -e
+
+if [ -f '.dpl' ]
+then
+  source '.dpl'
+
+  while getopts ":e:" opt; do
+  case $opt in
+    e)
+      env=$OPTARG
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      exit 1
+      ;;
+  esac
+  done
+
+  if [[ ! $env ]]
+  then
+    echo "You have to to define enviroment to check status, with -e <\$env>"
+    exit 1
+  else
+    # prepare deployment url
+    eval DEPLOYMENT=\$"${env}_deployment"
+
+    # and away we go
+    ssh webs <<EOI
+    cd ./deployments/$DEPLOYMENT
+    git status
+    echo ':)'
+    echo ''
+    exit
+EOI
+  fi
+else
+  echo "No .dpl file found, exiting"
+  echo ":("
+  echo ""
+  exit 1
+fi
